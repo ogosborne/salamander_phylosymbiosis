@@ -22,9 +22,10 @@ all_f <- merge_phyloseq(featureTab, taxonomy, metadata2020, sequences)
 all_f <- filter_taxa(all_f, function (x) {sum(x > 0) >1}, prune=TRUE) 
 # nsamples(all_f) == 376, sum(sample_sums(all_f)) == 7792027 
 ## Remove NA's from Phylum level (might be artifacts) and Archeae
-all_f <- subset_taxa(all_f, Phylum!="NA")
-all_f <- subset_taxa(all_f, Phylum!="Cyanobacteria/Chloroplast")
-all_f <- subset_taxa(all_f, Kingdom!="Archaea")
+all_f2 <- subset_taxa(all_f, !is.na(Phylum))
+all_f2 <- subset_taxa(all_f2, Phylum!="Cyanobacteria/Chloroplast")
+all_f2 <- subset_taxa(all_f2, Kingdom!="Archaea")
+all_f2 <- subset_taxa(all_f2, Class!="mitochondria" | is.na(Class))
 # nsamples(all_f) == 376, sum(sample_sums(all_f)) == 7287975
 ## Add ASVs as their own column in the tax_table
 tax_table(all_f) <- cbind(tax_table(all_f), rownames(tax_table(all_f)))
