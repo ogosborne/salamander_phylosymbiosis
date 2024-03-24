@@ -41,11 +41,11 @@ OLDPAR <- par()
 par(mfrow = c(2,1))
 par(mar=c(1, 5.1, 1, 2.1))
 # plot mrm
-barplot(as.matrix(mrm_coef[,c("R.host_dist", "R.geog_dist", "R.clim_dist", "R.envm_dist")]), beside = T, names.arg = rep("", 4), las = 2, ylab = expression(paste("Spearman's ", rho)), col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) 
+bp <- barplot(as.matrix(mrm_coef[,c("coeff.host_dist", "coeff.geog_dist", "coeff.clim_dist", "coeff.envm_dist")]), beside = T, names.arg = rep("", 4), las = 2, ylab = "Regression coeff.", col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) #c("Host phylogeny", "Geographic distance", "Climate distance", "environmental microbiome distance")
 legend("topright", legend = c("Jaccard", "Bray-Curtis", "UniFrac", "Weighted UniFrac"), fill = grey.colors(4), bty = "n", cex = 1.5, ncol = 2)
 # add stars
-xpos <- c(1:4, 6:9, 11:14, 16:19) + 0.5
-ypos  <- c(mrm_coef$R.host_dist, mrm_coef$R.geog_dist, mrm_coef$R.clim_dist, mrm_coef$R.envm_dist)
+xpos <- bp
+ypos  <- c(mrm_coef$coeff.host_dist, mrm_coef$coeff.geog_dist, mrm_coef$coeff.clim_dist, mrm_coef$coeff.envm_dist)
 ypos <- ifelse(ypos > 0, ypos + 0.03, 0.03)
 pvals  <- c(mrm_coef$P.host_dist, mrm_coef$P.geog_dist, mrm_coef$P.clim_dist, mrm_coef$P.envm_dist)
 stars <- stars.pval(pvals)

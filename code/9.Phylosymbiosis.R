@@ -144,12 +144,15 @@ write.csv(cospec.summary_g, file = "results/9.Phylosymbiosis/RF.perm.test.gASVs.
 # test the contributions of host phylogenetic distance, environmental microbiome distance, and geographic distance to patterns of phylosymbiosis
 # make covars into lower dists
 ## MRM
-# scale 
-covar_dists_d <- lapply(covar_dists, function(x) scales::rescale(as.dist(x), to = 0:1))
+# standardise distance matrices
+dismats_mrm <- dismats[paste0("sal.", dists)]
+covar_dists_d <- lapply(covar_dists, function(x) as.dist((x - mean(x)) / sd(x)))
+dismats_mrm <- lapply(dismats_mrm, function(x) as.dist((x - mean(x)) / sd(x)))
+# run mrm
 set.seed(64511018)
 MRM.results <- list()
 for(d in dists){
-  MRM.results[[d]] <- MRM(dismats[[paste0("sal.", d)]] ~ covar_dists_d$host_dist + covar_dists_d$geog_dist + covar_dists_d$clim_dist + covar_dists_d$envm_dist, nperm = 10000, mrank = TRUE)
+  MRM.results[[d]] <- MRM(dismats_mrm[[paste0("sal.", d)]] ~ covar_dists_d$host_dist + covar_dists_d$geog_dist + covar_dists_d$clim_dist + covar_dists_d$envm_dist, nperm = 10000, mrank = TRUE)
 }
 mrm.summary <- sum.mrm(MRM.results, covar_names = names(covar_dists))
 write.csv(mrm.summary$model.tests, file = "results/9.Phylosymbiosis/mrm.model.test.csv", row.names = F)
