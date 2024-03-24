@@ -121,8 +121,8 @@ sum.mrm <- function(x, covar_names){
   dists <- names(x)
   ndist <- length(dists)
   nvars <- nrow(x[[1]]$coef)
-  outRF <- data.frame(matrix(NA, ncol = 5, nrow = ndist, dimnames = list(dists, c("dist", "R", "Pval.R",  "F", "Pval.F"))))
-  outCo <- data.frame(matrix(NA, ncol = nvars * 2 + 1, nrow = ndist, dimnames = list(dists, c("dist", "R.int", paste0("R.", covar_names), "P.int", paste0("P.", covar_names)))))
+  outRF <- data.frame(matrix(NA, ncol = 5, nrow = ndist, dimnames = list(dists, c("dist", "R2", "Pval.R2",  "F", "Pval.F"))))
+  outCo <- data.frame(matrix(NA, ncol = nvars * 2 + 1, nrow = ndist, dimnames = list(dists, c("dist", "coeff.int", paste0("coeff.", covar_names), "P.int", paste0("P.", covar_names)))))
   outCo$dist <- outRF$dist <- dists
   for(N in 1:ndist){
     outRF[N,2:5] <- c( x[[dists[[N]]]]$r.squared, x[[dists[[N]]]]$F.test)
