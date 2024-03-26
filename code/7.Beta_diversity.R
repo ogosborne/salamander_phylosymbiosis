@@ -119,7 +119,7 @@ set.seed(23820801)
 PERM <- 99999
 # subset data
 env.dists <- list(dismats$env.ja, dismats$env.bc, dismats$env.uu, dismats$env.wu)
-env.groups <- meta(env_r)[,c("Locality", "Habitat")]
+env.groups <- sample_data(env_r)[,c("Locality", "Habitat")]
 # general permanova
 perm.env <- PermanovaG2(env.dists ~ Locality * Habitat, data = env.groups, permutations = PERM)
 perm.env.tab <- pg_output(perm.env)
