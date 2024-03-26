@@ -129,7 +129,7 @@ ppG$env.ppG.hab <- pairwise.permG(my.groups = env.groups, my.col = "Habitat", my
 ppG$env.ppG.loc <- pairwise.permG(my.groups = env.groups, my.col = "Locality", my.form = "~ Locality * Habitat", my.dists = env.dists, perm = PERM)
 # sals
 sal.dists <- list(dismats$sal.ja, dismats$sal.bc, dismats$sal.uu, dismats$sal.wu)
-sal.groups <- meta(sal_r)[,c("Species", "Locality", "Habitat")]
+sal.groups <- sample_data(sal_r)[,c("Species", "Locality", "Habitat")]
 # forest
 # subset data
 sal.for.groups <- sal.groups[which(sal.groups$Habitat == "Forest"), c("Species", "Locality")]
