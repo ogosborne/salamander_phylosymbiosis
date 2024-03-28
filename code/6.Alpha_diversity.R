@@ -142,12 +142,14 @@ make.italic <- function(x) as.expression(lapply(x, function(y) bquote(italic(.(y
 p.all.obs <- ggplot(all.richness, aes(x = Habitat, y = `ASV Richness`, color = Species, shape = Locality)) +
   geom_beeswarm(cex = 3, corral = "wrap") + scale_color_manual(values = sppcol, limits = names(sppcol), labels = make.italic(names(sppcol))) +
   theme_test() +
-  theme(legend.text.align = 0)
+  theme(legend.text.align = 0) + 
+  stat_summary(all.richness, fun = mean, geom = "crossbar",mapping = aes(x = Habitat, y = `ASV Richness`, group =1))
 p.all.obs
 # plot Chao1
 p.all.chao <- ggplot(all.richness, aes(x = Habitat, y = Chao1, color = Species, shape = Locality)) +
   geom_beeswarm(cex = 3, corral = "wrap") + scale_color_manual(values = sppcol, limits = names(sppcol), labels = make.italic(names(sppcol))) + 
   theme_test() +
-  theme(legend.text.align = 0)
+  theme(legend.text.align = 0) + 
+  stat_summary(all.richness, fun = mean, geom = "crossbar",mapping = aes(x = Habitat, y = Chao1, group =1))
 p.all.chao
 
