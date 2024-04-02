@@ -8,7 +8,6 @@ library(ecodist) # for MRM()
 library(dplyr) # for %>% 
 library(Biostrings) # for writeXStringSet()
 library(usedist) # for dist_subset
-library(scales) # for rescale()
 library(gtools) # for stars.pvals()
 source("code/phylosymbiosis_funcs.R") # custom functions
 
@@ -95,7 +94,11 @@ sal_all_LocHab_MD <- data.frame(sample_data(sal_all_LocHab))
 dismats_g <- list()
 dists_g <- c("jaccard", "bray", "unifrac", "wunifrac")
 for(d in dists_g){
-  dismats_g[[d]] <-  phyloseq::distance(sal_all_LocHab, d)
+  if(d == "jaccard"){
+    dismats_g[[d]] <- phyloseq::distance(sal_all_LocHab, d, binary = TRUE)
+  } else {
+    dismats_g[[d]] <- phyloseq::distance(sal_all_LocHab, d)
+  }
 }
 # get median microbiome distances
 med.sal.dist.per.spp_g <- list() 
@@ -169,7 +172,11 @@ sal_r_abd_MD <- data.frame(sample_data(sal_r_abd))
 dismats_a <- list()
 dists_a <- c("jaccard", "bray", "unifrac", "wunifrac")
 for(d in dists_a){
-  dismats_a[[d]] <-  phyloseq::distance(sal_r_abd, d)
+  if(d == "jaccard"){
+    dismats_a[[d]] <- phyloseq::distance(sal_r_abd, d, binary = TRUE)
+  } else {
+    dismats_a[[d]] <- phyloseq::distance(sal_r_abd, d)
+  }
 }
 # get median microbiome distances
 med.sal.dist.per.spp_a <- list() 
@@ -217,7 +224,7 @@ write.csv(cospec.summary_a, file = "results/9.Phylosymbiosis/RF.perm.test.antiBd
 # MRM
 # get scaled covar dists for 
 covar_dists_a <- lapply(covar_dists, function(x) usedist::dist_subset(as.dist(x), rownames(as.matrix(dismats_a$jaccard))))
-covar_dists_d_a <- lapply(covar_dists_a, function(x) scales::rescale(as.dist(x), to = 0:1))
+covar_dists_d_a <- lapply(covar_dists_a, function(x) as.dist((x - mean(x)) / sd(x)))
 # run MRM
 set.seed(11046443)
 MRM.results_a <- list()
@@ -233,12 +240,12 @@ OLDPAR <- par()
 # set par
 par(mar=c(10, 5.1, 1, 2.1))
 # plot mrm
-barplot(as.matrix(mrm.summary_a$coef[,c("R.host_dist", "R.geog_dist", "R.clim_dist", "R.envm_dist")]), beside = T, names.arg = rep("", 4), las = 1, ylab = expression(paste("Spearman's ", rho)), col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) 
+xpos <- barplot(as.matrix(mrm.summary_a$coef[,c("coeff.host_dist", "coeff.geog_dist", "coeff.clim_dist", "coeff.envm_dist")]), beside = T, names.arg = rep("", 4), las = 1, ylab = "Regression coeff.", col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) 
 mtext(at = c(3,8,13,18), side = 1, line = 4, text = c("Host phylogeny", "Geographic distance", "Climate distance", "Env. microbiome distance"), cex = 1)
 legend("topright", legend = c("Jaccard", "Bray-Curtis", "UniFrac", "Weighted UniFrac"), fill = grey.colors(4), bty = "n", cex = 1.5, ncol = 2)
 # add stars
-xpos <- c(1:4, 6:9, 11:14, 16:19) + 0.5
-ypos  <- c(mrm.summary_a$coef$R.host_dist, mrm.summary_a$coef$R.geog_dist, mrm.summary_a$coef$R.clim_dist, mrm.summary_a$coef$R.envm_dist)
+#xpos <- c(1:4, 6:9, 11:14, 16:19) + 0.5
+ypos  <- c(mrm.summary_a$coef$coeff.host_dist, mrm.summary_a$coef$coeff.geog_dist, mrm.summary_a$coef$coeff.clim_dist, mrm.summary_a$coef$coeff.envm_dist)
 ypos <- ifelse(ypos > 0, ypos + 0.03, 0.03)
 pvals  <- c(mrm.summary_a$coef$P.host_dist, mrm.summary_a$coef$P.geog_dist, mrm.summary_a$coef$P.clim_dist, mrm.summary_a$coef$P.envm_dist)
 stars <- stars.pval(pvals)
