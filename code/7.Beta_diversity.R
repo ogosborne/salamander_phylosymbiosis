@@ -20,8 +20,13 @@ DS <- c("all", "env", "sal")
 for(D in DS){
   for(d in dists){
     cat(d, D, "\n")
-    dismats[[paste(D, dists.s[[d]], sep= ".")]] <-
-      distance(get(paste(D, "r", sep = "_")), d)
+    if(d == "jaccard"){
+      dismats[[paste(D, dists.s[[d]], sep= ".")]] <-
+        distance(get(paste(D, "r", sep = "_")), d, binary = TRUE)
+    } else {
+      dismats[[paste(D, dists.s[[d]], sep= ".")]] <-
+        distance(get(paste(D, "r", sep = "_")), d)
+    }
   }
 }
 dir.create("results/7.Beta_diversity")
@@ -64,21 +69,24 @@ for(d in dists){
     theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(), 
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_rect(fill = "white", color = "black")) +
-    scale_color_manual(values = habcol) 
+    scale_color_manual(values = habcol) + 
+    theme(aspect.ratio=1)
   # species plot
   spp.plot <- plot_ordination(all_r, ord, shape = "Sample_Type", color = "Species") +  
     scale_shape_manual(values = c(4, 19)) + 
     theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(), 
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_rect(fill = "white", color = "black")) +
-    scale_color_manual(values = sppcol)
+    scale_color_manual(values = sppcol) + 
+    theme(aspect.ratio=1)
   # locality plot
   loc.plot <- plot_ordination(all_r, ord, shape = "Sample_Type", color = "Locality") +  
     scale_shape_manual(values = c(4, 19)) + 
     theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(), 
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_rect(fill = "white", color = "black")) +
-    scale_color_manual(values = loccol) 
+    scale_color_manual(values = loccol) + 
+    theme(aspect.ratio=1)
   # add to output
   ord.plots[[paste(D, dists.s[[d]], "hab", sep= ".")]] <- hab.plot
   ord.plots[[paste(D, dists.s[[d]], "spp", sep= ".")]] <- spp.plot
@@ -89,7 +97,7 @@ for(d in dists){
 grid.arrange(ord.plots$all.bc.spp + ggtitle("(a) Host Species") + theme(plot.title = element_text(size = 20)),
           ord.plots$all.bc.hab + ggtitle("(b) Habitat") + theme(plot.title = element_text(size = 20)),
           ord.plots$all.bc.loc + ggtitle("(c) Locality") + theme(plot.title = element_text(size = 20)),
-          layout_matrix = matrix(1:3, ncol=1)) 
+          layout_matrix = matrix(1:3, ncol=1), respect = T) 
 # make ones with legend to cut + paste on
 # function to make italic legend for species
 make.italic <- function(x) as.expression(lapply(x, function(y) bquote(italic(.(y)))))
@@ -110,16 +118,16 @@ grid.arrange(ord.plots$all.ja.spp,
              ord.plots$all.wu.spp,
              ord.plots$all.wu.hab,
              ord.plots$all.wu.loc,
-             layout_matrix = matrix(1:12, ncol=3, byrow = T))
+             layout_matrix = matrix(1:12, ncol=3, byrow = T), respect = T)
 
 # env 
 ppG <- list()
 # set seed
 set.seed(23820801)
-PERM <- 99999
+PERM <- 10000
 # subset data
 env.dists <- list(dismats$env.ja, dismats$env.bc, dismats$env.uu, dismats$env.wu)
-env.groups <- sample_data(env_r)[,c("Locality", "Habitat")]
+env.groups <- data.frame(sample_data(env_r))[,c("Locality", "Habitat")]
 # general permanova
 perm.env <- PermanovaG2(env.dists ~ Locality * Habitat, data = env.groups, permutations = PERM)
 perm.env.tab <- pg_output(perm.env)
@@ -129,7 +137,7 @@ ppG$env.ppG.hab <- pairwise.permG(my.groups = env.groups, my.col = "Habitat", my
 ppG$env.ppG.loc <- pairwise.permG(my.groups = env.groups, my.col = "Locality", my.form = "~ Locality * Habitat", my.dists = env.dists, perm = PERM)
 # sals
 sal.dists <- list(dismats$sal.ja, dismats$sal.bc, dismats$sal.uu, dismats$sal.wu)
-sal.groups <- sample_data(sal_r)[,c("Species", "Locality", "Habitat")]
+sal.groups <- data.frame(sample_data(sal_r))[,c("Species", "Locality", "Habitat")]
 # forest
 # subset data
 sal.for.groups <- sal.groups[which(sal.groups$Habitat == "Forest"), c("Species", "Locality")]
