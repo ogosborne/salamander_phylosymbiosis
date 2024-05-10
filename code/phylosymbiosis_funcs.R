@@ -126,7 +126,7 @@ sum.mrm <- function(x, covar_names){
   outCo$dist <- outRF$dist <- dists
   for(N in 1:ndist){
     outRF[N,2:5] <- c( x[[dists[[N]]]]$r.squared, x[[dists[[N]]]]$F.test)
-    outCo[N,2:11] <- c(round(x[[dists[[N]]]]$coef[,1],2), x[[dists[[N]]]]$coef[,2])
+    outCo[N,2:(nvars * 2 + 1)] <- c(round(x[[dists[[N]]]]$coef[,1],2), x[[dists[[N]]]]$coef[,2])
   }
   list(model.tests = outRF, coef = outCo)
 } 

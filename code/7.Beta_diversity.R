@@ -63,28 +63,38 @@ for(d in dists){
   # get inputs
   ps <- get(paste(D, "r", sep = "_"))
   ord <- nmds[[paste(D, dists.s[[d]], sep= ".")]]
+  scaleFUN <- function(x) sprintf("%.2f", x)
   # habitat plot
   hab.plot <- plot_ordination(all_r, ord, shape = "Sample_Type", color = "Habitat") +  
     scale_shape_manual(values = c(4, 19)) + 
-    theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(), 
+    theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(),
+          axis.text.x=element_text(colour="black"), axis.text.y=element_text(colour="black"),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_rect(fill = "white", color = "black")) +
+    scale_y_continuous(labels=scaleFUN) +
+    scale_x_continuous(labels=scaleFUN) +
     scale_color_manual(values = habcol) + 
     theme(aspect.ratio=1)
   # species plot
   spp.plot <- plot_ordination(all_r, ord, shape = "Sample_Type", color = "Species") +  
     scale_shape_manual(values = c(4, 19)) + 
-    theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(), 
+    theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(),
+          axis.text.x=element_text(colour="black"), axis.text.y=element_text(colour="black"),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_rect(fill = "white", color = "black")) +
+    scale_y_continuous(labels=scaleFUN) +
+    scale_x_continuous(labels=scaleFUN) +
     scale_color_manual(values = sppcol) + 
     theme(aspect.ratio=1)
   # locality plot
   loc.plot <- plot_ordination(all_r, ord, shape = "Sample_Type", color = "Locality") +  
     scale_shape_manual(values = c(4, 19)) + 
     theme(legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank(), 
+          axis.text.x=element_text(colour="black"), axis.text.y=element_text(colour="black"),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
           panel.background = element_rect(fill = "white", color = "black")) +
+    scale_y_continuous(labels=scaleFUN) +
+    scale_x_continuous(labels=scaleFUN) +
     scale_color_manual(values = loccol) + 
     theme(aspect.ratio=1)
   # add to output
@@ -94,9 +104,9 @@ for(d in dists){
 }
 
 # MAIN FIGURE
-grid.arrange(ord.plots$all.bc.spp + ggtitle("(a) Host Species") + theme(plot.title = element_text(size = 20)),
-          ord.plots$all.bc.hab + ggtitle("(b) Habitat") + theme(plot.title = element_text(size = 20)),
-          ord.plots$all.bc.loc + ggtitle("(c) Locality") + theme(plot.title = element_text(size = 20)),
+grid.arrange(ord.plots$all.bc.spp + ggtitle("A Host species") + theme(plot.title = element_text(size = 20)),
+          ord.plots$all.bc.hab + ggtitle("B Habitat") + theme(plot.title = element_text(size = 20)),
+          ord.plots$all.bc.loc + ggtitle("C Locality") + theme(plot.title = element_text(size = 20)),
           layout_matrix = matrix(1:3, ncol=1), respect = T) 
 # make ones with legend to cut + paste on
 # function to make italic legend for species

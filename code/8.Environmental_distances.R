@@ -20,7 +20,7 @@ env.metadata <- data.frame(sample_data(env_r))
 ### skin microbiome distance covariates
 covar_dists <- list()
 ## host phylogenetic distance
-host.phylo <- read.tree("data/host.timetree.31JUL23_short.nwk")
+host.phylo <- read.tree("data/timetree_31JUL23/host.timetree.31JUL23_short.nwk")
 host.phylo$tip.label <- gsub("_", " ", host.phylo$tip.label)
 # get distance matrix
 host_dist_sp <- cophenetic(host.phylo)
@@ -53,6 +53,13 @@ diag(envm_dist) <- 0
 # then expand the matrix to give mean environmental microbiome distance between each pair of salamander samples
 envm_dist <- expand_mat(as.matrix(dismats$sal.ja), envm_dist, metadata = sal.metadata, col = "Loc_Hab")
 covar_dists$envm_dist <- envm_dist 
+## Bd load distance
+bdload <- sal.metadata$Bd_load
+bdload <- ifelse(is.na(bdload),0,bdload)
+bdload <- log10(bdload+1)
+names(bdload) <- rownames(sal.metadata)
+bdlo_dist <- as.matrix(dist(bdload)) 
+covar_dists$bdlo_dist <- bdlo_dist
 # check all covariates are in the same order
 for(n in names(covar_dists)) {print(all(rownames(covar_dists[[n]]) == rownames(covar_dists$host_dist))) ; print(all(colnames(covar_dists[[n]]) == colnames(covar_dists$host_dist)))}
 # get covariates in same order

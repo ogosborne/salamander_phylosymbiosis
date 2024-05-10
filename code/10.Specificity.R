@@ -11,10 +11,10 @@ dir.create("results/10.Specificity/")
 load("results/4.Rarefy_and_subset/sal_raref.RData")
 ## load env distances 
 load("results/8.Environmental_distances/env.dists.RData")
+# load antiBD 
+AntiBd <- read.csv("results/5.Antifungal_DB/blast.filt.uniq.csv", header = T)
 # get OTU tab
 sal.otutable <-  t(as(otu_table(sal_r), "matrix"))
-# transform to proportional abundance
-#sal.otutableP <- prop_abund(sal.otutable)
 # remove taxa in less than 10 samples
 sal.otutable_ovr10 <- occ_threshold(sal.otutable, threshold=10)
 # set cores
@@ -25,10 +25,12 @@ set.seed(44532)
 for(e in names(covar_dists)){
   spec_all[[e]] <- phy_or_env_spec(sal.otutable_ovr10, env = covar_dists[[e]], n_sim=10000, n_cores = spec_ncores, tails = 2)
 }
+# combine
 spec_comb <- do.call(cbind, spec_all)
-spec_comb$AntiBd <- names(spec_comb) %in% AntiBd$qseqid
+# add antiBd
+spec_comb$AntiBd <- rownames(spec_comb) %in% AntiBd$qseqid
 # plot correlations between specificities
-names(spec_all) <- c("Host Phylogeny", "Geographic Distance", "Climate Distance", "Environmental Microbiome Distance")
+names(spec_all) <- c("Host Phylogeny", "Geographic Distance", "Climate Distance", "Environmental Microbiome Distance", "log10(Bd load + 1)")
 plot_pairwise_spec(spec_all, cor_red_lim = 1, label_cex = 1.2, point_cex = 0.5)
 # save
 save(list = c("spec_all", "spec_comb"), file = "results/10.Specificity/specificity_res.RData")
@@ -41,20 +43,20 @@ OLDPAR <- par()
 par(mfrow = c(2,1))
 par(mar=c(1, 5.1, 1, 2.1))
 # plot mrm
-bp <- barplot(as.matrix(mrm_coef[,c("coeff.host_dist", "coeff.geog_dist", "coeff.clim_dist", "coeff.envm_dist")]), beside = T, names.arg = rep("", 4), las = 2, ylab = "Regression coeff.", col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) #c("Host phylogeny", "Geographic distance", "Climate distance", "environmental microbiome distance")
-legend("topright", legend = c("Jaccard", "Bray-Curtis", "UniFrac", "Weighted UniFrac"), fill = grey.colors(4), bty = "n", cex = 1.5, ncol = 2)
+bp <- barplot(as.matrix(mrm_coef[,c("coeff.host_dist", "coeff.geog_dist", "coeff.clim_dist", "coeff.envm_dist", "coeff.bdlo_dist")]), beside = T, names.arg = rep("", 5), las = 2, ylab = "Regression coeff.", col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) 
+legend(x = 6.4, y = 0.7, legend = c("Jaccard", "Bray-Curtis", "UniFrac", "Weighted UniFrac"), fill = grey.colors(4), bty = "n", cex = 1.5, ncol = 2)
 # add stars
 xpos <- bp
-ypos  <- c(mrm_coef$coeff.host_dist, mrm_coef$coeff.geog_dist, mrm_coef$coeff.clim_dist, mrm_coef$coeff.envm_dist)
+ypos  <- c(mrm_coef$coeff.host_dist, mrm_coef$coeff.geog_dist, mrm_coef$coeff.clim_dist, mrm_coef$coeff.envm_dist, mrm_coef$coeff.bdlo_dist)
 ypos <- ifelse(ypos > 0, ypos + 0.03, 0.03)
-pvals  <- c(mrm_coef$P.host_dist, mrm_coef$P.geog_dist, mrm_coef$P.clim_dist, mrm_coef$P.envm_dist)
+pvals  <- c(mrm_coef$P.host_dist, mrm_coef$P.geog_dist, mrm_coef$P.clim_dist, mrm_coef$P.envm_dist, mrm_coef$coeff.bdlo_dist)
 stars <- stars.pval(pvals)
 text(x = xpos, y = ypos, labels = stars)
 # plot specificity
 Nspec <- unlist(lapply(spec_all, function(x) length(which(x$Pval <= 0.05 & x$Spec < 0))))
 Ncosm <- unlist(lapply(spec_all, function(x) length(which(x$Pval <= 0.05 & x$Spec > 0))))
-barplot(rbind(Nspec, Ncosm), col =c("gray", "black"), border = NA, ylab = "N significant ASVs", cex.lab = 1.5)
-legend("top", legend = c("Specific", "Cosmopolitan"), fill =c("gray", "black"), bty = "n", cex = 1.5)
+barplot(rbind(Nspec, Ncosm), col =c("gray", "black"), border = NA, ylab = "Significant ASVs", cex.lab = 1.5)
+legend(x = 1.5, y = 800, legend = c("Specific", "Generalist"), fill =c("gray", "black"), bty = "n", cex = 1.5)
 # restore default par
 par(OLDPAR)
 ## plot heat tree
@@ -83,11 +85,10 @@ x = parse_tax_data(tt, class_cols = "lineage", class_sep = ";",
                    class_key = c(tax_rank = "taxon_rank", tax_name = "taxon_name"),
                    class_regex = "^(.+)__(.+)$")
 x$data$host_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$host_dist.Spec[i])))
-x$data$envm_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$envm_dist.Spec[i])))
-x$data$clim_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$clim_dist.Spec[i])))
 x$data$geog_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$geog_dist.Spec[i])))
-
-
+x$data$clim_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$clim_dist.Spec[i])))
+x$data$envm_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$envm_dist.Spec[i])))
+x$data$bdlo_spec <- unlist(lapply(obs(x, data = 'tax_data'), function(i)  mean(x$data$tax_data$bdlo_dist.Spec[i])))
 # taxon abundance
 x$data$tax_table <- calc_taxon_abund(x, data = "tax_data", cols = sample_names(sal_r), groups = rep("Abundance", nsamples(sal_r)))
 # palette
@@ -160,15 +161,29 @@ x %>%
             node_label_size_trans ="area",
             node_color_axis_label = "Specificity",
             output_file = "results/10.Specificity/clim.spec.heattree.o.pdf")
+# plot Bd load specificity
+set.seed(1234)
+x %>% 
+  metacoder::filter_taxa(taxon_ranks == "o", supertaxa = T) %>% 
+  heat_tree(node_label = ifelse(!(taxon_ranks %in% c("p", "c", "o")) | taxon_names == "NA", "", taxon_names), 
+            node_size = Abundance, 
+            node_color = bdlo_spec, 
+            node_color_range = coolwarm_hcl, 
+            layout = "davidson-harel", 
+            initial_layout = "reingold-tilford", 
+            node_color_interval = c(-1, 1),
+            edge_color_interval = c(-1, 1),
+            node_color_trans = "linear",
+            node_size_trans = "linear",
+            node_label_size_trans ="area",
+            node_color_axis_label = "Specificity",
+            output_file = "results/10.Specificity/bdlo.spec.heattree.o.pdf")
 ## plot envm vs host spec, with known anti-Bd highlighted
 # combine Specificity results and taxonomy
 tt <- tax_table(sal_r)
 tt <- data.frame(tt[rownames(spec_comb),])
 df <- cbind(tt,spec_comb)
 rm(tt)
-# get antiBD 
-AntiBd <- read.csv("results/5.Antifungal_DB/blast.filt.uniq.csv", header = T)
-df$AntiBd <- df$ASV %in% AntiBd$qseqid
 # save
 write.csv(df, file = "results/10.Specificity/Specificity_results.csv", row.names = F)
 # combine rare clades into "other"

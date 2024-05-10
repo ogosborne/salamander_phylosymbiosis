@@ -85,7 +85,25 @@ for(d in dists){
   plot.col.cophylo(t1 = host.phylo, t2 = spp.clust[[d]], col = sppcol)
 }
 
-######## 3. IS THE SIGNAL OF PHYLOSYMBIOSIS DRIVEN BY HABITAT AND LOCALITY-SPECIFIC MICROBIAL TAXA? ########
+######## 3. DO ENVIRONMENTAL COVARIATES CONTRIBUTE TO PHYLOSYMBIOSIS? ########
+# test the contributions of host phylogenetic distance, environmental microbiome distance, and geographic distance to patterns of phylosymbiosis
+# make covars into lower dists
+## MRM
+# standardise distance matrices
+dismats_mrm <- dismats[paste0("sal.", dists)]
+covar_dists_d <- lapply(covar_dists, function(x) as.dist((x - mean(x)) / sd(x)))
+dismats_mrm <- lapply(dismats_mrm, function(x) as.dist((x - mean(x)) / sd(x)))
+# run mrm
+set.seed(64511018)
+MRM.results <- list()
+for(d in dists){
+  MRM.results[[d]] <- MRM(dismats_mrm[[paste0("sal.", d)]] ~ covar_dists_d$host_dist + covar_dists_d$geog_dist + covar_dists_d$clim_dist + covar_dists_d$envm_dist + covar_dists_d$bdlo_dist, nperm = 10000, mrank = TRUE)
+}
+mrm.summary <- sum.mrm(MRM.results, covar_names = names(covar_dists))
+write.csv(mrm.summary$model.tests, file = "results/9.Phylosymbiosis/mrm.model.test.csv", row.names = F)
+write.csv(mrm.summary$coef, file = "results/9.Phylosymbiosis/mrm.coef.csv", row.names = F)
+
+######## 4. IS THE SIGNAL OF PHYLOSYMBIOSIS DRIVEN BY HABITAT AND LOCALITY-SPECIFIC MICROBIAL TAXA? ########
 ## Make dataset with only taxa in all habitat-locality combinations 
 all.LocHab <- global_ASVs(physeq = all_f, col = "Loc_Hab")
 sal_all_LocHab <- prune_taxa(taxa_names(all.LocHab), sal_r)
@@ -142,25 +160,85 @@ for(d in dists_g){
 }
 cospec.summary_g <- sum.cospec(cospec.results_g)
 write.csv(cospec.summary_g, file = "results/9.Phylosymbiosis/RF.perm.test.gASVs.csv", row.names = F)
-
-######## 4. DO ENVIRONMENTAL COVARIATES CONTRIBUTE TO PHYLOSYMBIOSIS? ########
-# test the contributions of host phylogenetic distance, environmental microbiome distance, and geographic distance to patterns of phylosymbiosis
-# make covars into lower dists
-## MRM
-# standardise distance matrices
-dismats_mrm <- dismats[paste0("sal.", dists)]
-covar_dists_d <- lapply(covar_dists, function(x) as.dist((x - mean(x)) / sd(x)))
-dismats_mrm <- lapply(dismats_mrm, function(x) as.dist((x - mean(x)) / sd(x)))
-# run mrm
-set.seed(64511018)
-MRM.results <- list()
-for(d in dists){
-  MRM.results[[d]] <- MRM(dismats_mrm[[paste0("sal.", d)]] ~ covar_dists_d$host_dist + covar_dists_d$geog_dist + covar_dists_d$clim_dist + covar_dists_d$envm_dist, nperm = 10000, mrank = TRUE)
+# MRM
+# get scaled covar dists for global ASVs 
+covar_dists_g <- lapply(covar_dists, function(x) usedist::dist_subset(as.dist(x), rownames(as.matrix(dismats_g$jaccard))))
+covar_dists_d_g <- lapply(covar_dists_g, function(x) as.dist((x - mean(x)) / sd(x)))
+dismats_g <- lapply(dismats_g, function(x) as.dist((x - mean(x)) / sd(x)))
+# run MRM
+set.seed(11046443)
+MRM.results_g <- list()
+for(d in dists_g){
+  MRM.results_g[[d]] <- MRM(dismats_g[[d]] ~ covar_dists_d_g$host_dist + covar_dists_d_g$geog_dist + covar_dists_d_g$clim_dist + covar_dists_d_g$envm_dist + covar_dists_d_g$bdlo_dist, nperm = 10000, mrank = TRUE)
 }
-mrm.summary <- sum.mrm(MRM.results, covar_names = names(covar_dists))
-write.csv(mrm.summary$model.tests, file = "results/9.Phylosymbiosis/mrm.model.test.csv", row.names = F)
-write.csv(mrm.summary$coef, file = "results/9.Phylosymbiosis/mrm.coef.csv", row.names = F)
-
+mrm.summary_g <- sum.mrm(MRM.results_g, covar_names = names(covar_dists_d_g))
+write.csv(mrm.summary_g$model.tests, file = "results/9.Phylosymbiosis/mrm.model.test.gASVs.csv", row.names = F)
+write.csv(mrm.summary_g$coef, file = "results/9.Phylosymbiosis/mrm.coef.gASVs.csv", row.names = F)
+## test phylosymbiosis within habitat subsets (stream and forest only, since pond only contains 2 species)
+# prep data
+hab_hdi <- list() # individual-level host phylogenetic distance
+hab_mdi <- list() # individual-level microbiome distances
+for(h in c("Stream", "Forest")){
+  # metadata
+  md <- sal.metadata[which(sal.metadata$Habitat == h),] 
+  # sample list
+  ind <- md$sample
+  # spp list
+  spp <- sort(unique(md$Species)) 
+  # host phylo distance matrix
+  # species level
+  phy <- ape::drop.tip(phy = host.phylo, setdiff(host.phylo$tip.label, spp)) 
+  hds <- phy %>% ape::cophenetic.phylo()
+  # individual level
+  template.dm <- as.matrix(usedist::dist_subset(dismats$sal.ja, ind))
+  hdi <- expand_mat(template.dm, hds, metadata = md, col = "Species")
+  # per-individual microbiome distance matrices 
+  mdi <- list()
+  for(d in dists){
+    dm <-  dismats[[paste0("sal.",d)]]
+    my.mdi <- usedist::dist_subset(dm, ind)
+    mdi[[d]] <- my.mdi
+  }
+  # assign to outputs
+  hab_hdi[[h]] <- hdi
+  hab_mdi[[h]] <- mdi
+}
+rm(list = c("d", "dm", "h", "hdi", "hds", "ind", "md", "mdi", "my.mdi", "phy", "spp", "template.dm"))
+## re-test phylosymbiosis with individual-level mantel test ():
+set.seed(4576434)
+mantel.ind.results.hab <- list()
+mantel.ind.summary.hab <- list()
+for(h in c("Stream", "Forest")){
+  mantel.ind.results.hab[[h]] <- list()
+  for(d in dists){
+    mantel.ind.results.hab[[h]][[d]] <- vegan::mantel(xdis = hab_hdi[[h]], ydis = hab_mdi[[h]][[d]], permutations = 10000)
+  }
+  mantel.ind.summary.hab[[h]] <- sum.mantel(mantel.ind.results.hab[[h]])
+  write.csv(mantel.ind.summary.hab[[h]], file = paste0("results/9.Phylosymbiosis/ind.mantel.", h, ".csv"), row.names = F)
+}
+rm(list = c( "d", "h"))
+# MRM
+# get scaled covar dists for habitat subsets
+covar_dists.hab <- list()
+micro_dists.hab <- list()
+for(h in c("Stream", "Forest")){
+  cvd <- lapply(covar_dists, function(x) usedist::dist_subset(as.dist(x), rownames(as.matrix(hab_mdi[[h]]$ja))))
+  covar_dists.hab[[h]] <- lapply(cvd, function(x) as.dist((x - mean(x)) / sd(x)))
+  micro_dists.hab[[h]] <- lapply(hab_mdi[[h]], function(x) as.dist((x - mean(x)) / sd(x)))
+}
+# run MRM
+set.seed(11046443)
+MRM.results.hab <- list()
+MRM.summary.hab <- list()
+for(h in c("Stream", "Forest")){
+  MRM.results.hab[[h]] <- list()
+  for(d in dists){
+    MRM.results.hab[[h]][[d]] <- MRM(micro_dists.hab[[h]][[d]] ~ covar_dists.hab[[h]]$host_dist + covar_dists.hab[[h]]$geog_dist + covar_dists.hab[[h]]$clim_dist + covar_dists.hab[[h]]$envm_dist + covar_dists.hab[[h]]$bdlo_dist, nperm = 10000, mrank = TRUE)
+  }
+  MRM.summary.hab[[h]] <- sum.mrm(MRM.results.hab[[h]], covar_names = names(covar_dists.hab[[h]]))
+  write.csv(MRM.summary.hab[[h]]$model.tests, file = paste0("results/9.Phylosymbiosis/mrm.model.test.", h, ".csv"), row.names = F)
+  write.csv(MRM.summary.hab[[h]]$coef, file = paste0("results/9.Phylosymbiosis/mrm.coef.", h, ".csv"), row.names = F)
+}
 ######## 5. DOES PHYLOSYMBIOSIS DRIVE THE DISTRIBUTION OF PATHOGEN-PROTECTIVE MICROBIAL TAXA? ########
 ## load antiBd
 antiBd <- read.csv("results/5.Antifungal_DB/blast.filt.uniq.csv", header = T)
@@ -195,9 +273,9 @@ for(d in dists_a){
   tree <- root(tree, node = anc)
   spp.clust_a[[d]] <- tree
 }
-# get tree dist per ind
+# get host phylogenetic dist per ind
 host_dist_abd <- expand_mat(as.matrix(dismats_a$jaccard), as.matrix(covar_dists_spp$host_dist), metadata = sal_r_abd_MD, col = "Species")
-# in mantel test
+# individual-level mantel test
 set.seed(61511023)
 mantel.ind.results_a <- list()
 for(d in dists_a){
@@ -222,35 +300,43 @@ for(d in dists_a){
 cospec.summary_a <- sum.cospec(cospec.results_a)
 write.csv(cospec.summary_a, file = "results/9.Phylosymbiosis/RF.perm.test.antiBd.csv", row.names = F)
 # MRM
-# get scaled covar dists for 
+# get scaled covar dists for antibd
 covar_dists_a <- lapply(covar_dists, function(x) usedist::dist_subset(as.dist(x), rownames(as.matrix(dismats_a$jaccard))))
 covar_dists_d_a <- lapply(covar_dists_a, function(x) as.dist((x - mean(x)) / sd(x)))
+dismats_a <- lapply(dismats_a, function(x) as.dist((x - mean(x)) / sd(x)))
 # run MRM
 set.seed(11046443)
 MRM.results_a <- list()
 for(d in dists_a){
-  MRM.results_a[[d]] <- MRM(dismats_a[[d]] ~ covar_dists_d_a$host_dist + covar_dists_d_a$geog_dist + covar_dists_d_a$clim_dist + covar_dists_d_a$envm_dist, nperm = 10000, mrank = TRUE)
+  MRM.results_a[[d]] <- MRM(dismats_a[[d]] ~ covar_dists_d_a$host_dist + covar_dists_d_a$geog_dist + covar_dists_d_a$clim_dist + covar_dists_d_a$envm_dist + covar_dists_d_a$bdlo_dist, nperm = 10000, mrank = TRUE)
 }
 mrm.summary_a <- sum.mrm(MRM.results_a, covar_names = names(covar_dists_d_a))
 write.csv(mrm.summary_a$model.tests, file = "results/9.Phylosymbiosis/mrm.model.test_antiBd.csv", row.names = F)
 write.csv(mrm.summary_a$coef, file = "results/9.Phylosymbiosis/mrm.coef_antiBd.csv", row.names = F)
-## plot coefficients
-# save par
-OLDPAR <- par()
+## plot MRM coefficients for all subsets
 # set par
-par(mar=c(10, 5.1, 1, 2.1))
-# plot mrm
-xpos <- barplot(as.matrix(mrm.summary_a$coef[,c("coeff.host_dist", "coeff.geog_dist", "coeff.clim_dist", "coeff.envm_dist")]), beside = T, names.arg = rep("", 4), las = 1, ylab = "Regression coeff.", col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7)) 
-mtext(at = c(3,8,13,18), side = 1, line = 4, text = c("Host phylogeny", "Geographic distance", "Climate distance", "Env. microbiome distance"), cex = 1)
-legend("topright", legend = c("Jaccard", "Bray-Curtis", "UniFrac", "Weighted UniFrac"), fill = grey.colors(4), bty = "n", cex = 1.5, ncol = 2)
-# add stars
-#xpos <- c(1:4, 6:9, 11:14, 16:19) + 0.5
-ypos  <- c(mrm.summary_a$coef$coeff.host_dist, mrm.summary_a$coef$coeff.geog_dist, mrm.summary_a$coef$coeff.clim_dist, mrm.summary_a$coef$coeff.envm_dist)
-ypos <- ifelse(ypos > 0, ypos + 0.03, 0.03)
-pvals  <- c(mrm.summary_a$coef$P.host_dist, mrm.summary_a$coef$P.geog_dist, mrm.summary_a$coef$P.clim_dist, mrm.summary_a$coef$P.envm_dist)
-stars <- stars.pval(pvals)
-text(x = xpos, y = ypos, labels = stars)
-par(OLDPAR)
+par(mar=c(10, 5.1, 2, 2.1), mfrow = c(3,2))
+# plot
+mrm.sums <- list("All" = mrm.summary,
+                 "Global ASVs" = mrm.summary_g,
+                 "Stream" = MRM.summary.hab$Stream,
+                 "Forest" = MRM.summary.hab$Forest,
+                 "Bd-inhibitory ASVs" = mrm.summary_a)
+for(n in names(mrm.sums)){
+  my.mrm <- mrm.sums[[n]]
+  # plot mrm coefficients 
+  xpos <- barplot(as.matrix(my.mrm$coef[,c("coeff.host_dist", "coeff.geog_dist", "coeff.clim_dist", "coeff.envm_dist", "coeff.bdlo_dist")]), beside = T, names.arg = rep("", 5), las = 1, ylab = "Regression coeff.", col = grey.colors(4), cex.lab = 1.5, ylim = c(0, 0.7), main = n, cex.main = 2) 
+  mtext(at = c(3,8,13,18, 23), side = 1, line = 4, text = c("Host\nphylogeny", "Geographic\ndistance", "Climate\ndistance", "Env. microbiome\ndistance", "Bd\nload"), cex = 1)
+  # add stars
+  ypos  <- c(my.mrm$coef$coeff.host_dist, my.mrm$coef$coeff.geog_dist,my.mrm$coef$coeff.clim_dist, my.mrm$coef$coeff.envm_dist, my.mrm$coef$coeff.bdlo_dist)
+  ypos <- ifelse(ypos > 0, ypos + 0.03, 0.03)
+  pvals  <- c(my.mrm$coef$P.host_dist, my.mrm$coef$P.geog_dist, my.mrm$coef$P.clim_dist, my.mrm$coef$P.envm_dist, my.mrm$coef$P.bdlo_dist)
+  stars <- stars.pval(pvals)
+  text(x = xpos, y = ypos, labels = stars)
+}
+plot.new()
+legend("center", legend = c("Jaccard", "Bray-Curtis", "UniFrac", "Weighted UniFrac"), fill = grey.colors(4), bty = "n", cex = 2, ncol = 1)
+
 
 ######## 6. DOES HOST-MICROBE CO-SPECIATION CONTRIBUTE TO PHYLOSYMBIOSIS? ########
 ## cluster ASVs
