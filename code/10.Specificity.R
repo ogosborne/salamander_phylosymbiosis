@@ -197,7 +197,7 @@ names(phy.cols.ns) <- names(phy.cols)
 # par
 par(mar = c(5.1, 6.1, 4.1, 2.1))
 # plot
-plot(df.mod$host_dist.Spec, df.mod$envm_dist.Spec, pch = 19, col = phy.cols.ns[df.mod$Phylum], cex = 2, xlab = "Host phylogeny Spec.", ylab = "Environmental microbiome Spec.",cex.axis = 1.5, cex.lab = 2, xlim = c(-1, 1), ylim = c(-1, 1), bty = "n")
+plot(df.mod$host_dist.Spec, df.mod$envm_dist.Spec, pch = 19, col = phy.cols.ns[df.mod$Phylum], cex = 2, xlab = "Host phylogeny Spec.", ylab = "Environmental microbiome Spec.",cex.axis = 1.5, cex.lab = 2, xlim = c(-1, 1), ylim = c(-1, 1), bty = "n", asp = 1, las = 1)
 abline(v=0)
 abline(h=0)
 points(df.mod.abd$host_dist.Spec, df.mod.abd$envm_dist.Spec, bg = phy.cols[df.mod.abd$Phylum], cex = 3, pch = 23, lwd = 1, col = "black")
